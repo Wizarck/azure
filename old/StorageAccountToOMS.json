@@ -1,0 +1,42 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    },
+    "variables": {
+        "solution": "[concat('ServiceFabric', '(', 'comitwspew1', ')')]",
+        "solutionName": "ServiceFabric"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-11-01-preview",
+            "name": "comitwspew1",
+            "location": "[resourceGroup().location]",
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "properties": {
+                "sku": {
+                    "name": "PerNode"
+                }
+            },
+            "resources": [
+                {
+                    "apiVersion": "2015-11-01-preview",
+                    "name": "commpsspew3h7sjd-OMSConfig",
+                    "type": "storageInsightConfigs",
+                    "dependsOn": [
+                        "['/subscriptions/dbc7e692-0f8a-4519-a281-2c6d15890518/resourcegroups/comws-p-rg1/providers/microsoft.operationalinsights/workspaces/comitwspew1']"
+                    ],
+                    "properties": {
+                        "containers": [],
+                        "tables": [],
+                        "storageAccount": {
+                            "id": "['/subscriptions/b1708dad-d05b-4fa0-b595-63a45d8275c8/resourceGroups/commp-p-rg0/providers/Microsoft.Storage/storageAccounts/commpsspew3h7sjd']",
+                            "key": "[listKeys('/subscriptions/b1708dad-d05b-4fa0-b595-63a45d8275c8/resourceGroups/commp-p-rg0/providers/Microsoft.Storage/storageAccounts/commpsspew3h7sjd','2015-06-15').key1]"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {}
+}

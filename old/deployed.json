@@ -1,0 +1,83 @@
+{
+    "authorization": {
+        "action": "Microsoft.Network/virtualNetworkGateways/write",
+        "scope": "/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourcegroups/RG-Default-EW/providers/Microsoft.Network/virtualNetworkGateways/vpnGateway"
+    },
+    "caller": "wizarck@hotmail.com",
+    "channels": "Operation",
+    "claims": {
+        "aud": "https://management.core.windows.net/",
+        "iss": "https://sts.windows.net/2c138fbd-678e-498c-a152-6c8436cf0961/",
+        "iat": "1505917946",
+        "nbf": "1505917946",
+        "exp": "1505921846",
+        "http://schemas.microsoft.com/claims/authnclassreference": "1",
+        "aio": "Y2VgYOismsCRxPF/X0dy3QomNpbdgtNXezfF70g2kXy5vMNUaT4A",
+        "altsecid": "1:live.com:00067FFE8EA0901F",
+        "http://schemas.microsoft.com/claims/authnmethodsreferences": "pwd",
+        "appid": "c44b4083-3bb0-49c1-b47d-974e53cbdf3c",
+        "appidacr": "2",
+        "e_exp": "262800",
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress": "wizarck@hotmail.com",
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname": "Ramirez",
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname": "Arturo",
+        "groups": "c17e254e-30c7-4e47-a149-69d15eac4fe9",
+        "http://schemas.microsoft.com/identity/claims/identityprovider": "live.com",
+        "ipaddr": "80.59.233.174",
+        "name": "Arturo Ramirez",
+        "http://schemas.microsoft.com/identity/claims/objectidentifier": "01c2e934-8865-4158-b811-75ec5020688d",
+        "puid": "1003BFFDA4B23008",
+        "http://schemas.microsoft.com/identity/claims/scope": "user_impersonation",
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": "0-zgdhP8l1iNRkOCRbgdeONq_-UAVksJUiid74z2ZcM",
+        "http://schemas.microsoft.com/identity/claims/tenantid": "2c138fbd-678e-498c-a152-6c8436cf0961",
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name": "live.com#wizarck@hotmail.com",
+        "uti": "QV-a-V23AUSQ4kuXGHsJAA",
+        "ver": "1.0",
+        "wids": "62e90394-69f5-4237-9190-012177145e10"
+    },
+    "correlationId": "933dc46f-f06b-428b-865d-9d871f4a9197",
+    "eventDataId": "d4f46c5b-39cb-4c48-a9eb-af0b8833830d",
+    "eventName": {
+        "value": "EndRequest",
+        "localizedValue": "End request"
+    },
+    "category": {
+        "value": "Administrative",
+        "localizedValue": "Administrative"
+    },
+    "eventTimestamp": "2017-09-20T16:30:50.5389303Z",
+    "id": "/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourcegroups/RG-Default-EW/providers/Microsoft.Network/virtualNetworkGateways/vpnGateway/events/d4f46c5b-39cb-4c48-a9eb-af0b8833830d/ticks/636415218505389303",
+    "level": "Informational",
+    "operationId": "1f02110b-f6f2-40ef-9eb5-7f87e6db7889",
+    "operationName": {
+        "value": "Microsoft.Network/virtualNetworkGateways/write",
+        "localizedValue": "Microsoft.Network/virtualNetworkGateways/write"
+    },
+    "resourceGroupName": "RG-Default-EW",
+    "resourceProviderName": {
+        "value": "Microsoft.Network",
+        "localizedValue": "Microsoft.Network"
+    },
+    "resourceType": {
+        "value": "Microsoft.Network/virtualNetworkGateways",
+        "localizedValue": "Microsoft.Network/virtualNetworkGateways"
+    },
+    "resourceId": "/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourcegroups/RG-Default-EW/providers/Microsoft.Network/virtualNetworkGateways/vpnGateway",
+    "status": {
+        "value": "Succeeded",
+        "localizedValue": "Succeeded"
+    },
+    "subStatus": {
+        "value": "",
+        "localizedValue": ""
+    },
+    "submissionTimestamp": "2017-09-20T16:31:09.8632345Z",
+    "subscriptionId": "7181402d-a481-459e-8f31-8a8e5cbe5702",
+    "properties": {
+        "requestbody": "{\"location\":\"westeurope\",\"properties\":{\"ipConfigurations\":[{\"properties\":{\"privateIPAllocationMethod\":\"Dynamic\",\"subnet\":{\"id\":\"/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourceGroups/RG-Default-EW/providers/Microsoft.Network/virtualNetworks/vpnGateway-LocalVNet/subnets/GatewaySubnet\"},\"publicIPAddress\":{\"id\":\"/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourceGroups/RG-Default-EW/providers/Microsoft.Network/publicIPAddresses/vpnGateway-PIP\"}},\"name\":\"vnetGatewayConfig\"}],\"sku\":{\"name\":\"Basic\",\"tier\":\"Basic\"},\"gatewayType\":\"Vpn\",\"vpnType\":\"RouteBased\",\"enableBgp\":\"false\"}}",
+        "statusCode": "Created",
+        "serviceRequestId": "d1cca28d-4857-4dcf-82f5-1ec9a588dd81",
+        "responseBody": "{\"name\":\"vpnGateway\",\"id\":\"/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourceGroups/RG-Default-EW/providers/Microsoft.Network/virtualNetworkGateways/vpnGateway\",\"etag\":\"W/\\\"74dfa461-0a4e-4dad-bdab-5dc50a4426ef\\\"\",\"type\":\"Microsoft.Network/virtualNetworkGateways\",\"location\":\"westeurope\",\"properties\":{\"provisioningState\":\"Updating\",\"resourceGuid\":\"c6d97f4d-bc22-4059-a4f2-3b6b90abfabf\",\"ipConfigurations\":[{\"name\":\"vnetGatewayConfig\",\"id\":\"/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourceGroups/RG-Default-EW/providers/Microsoft.Network/virtualNetworkGateways/vpnGateway/ipConfigurations/vnetGatewayConfig\",\"etag\":\"W/\\\"74dfa461-0a4e-4dad-bdab-5dc50a4426ef\\\"\",\"properties\":{\"provisioningState\":\"Updating\",\"privateIPAllocationMethod\":\"Dynamic\",\"publicIPAddress\":{\"id\":\"/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourceGroups/RG-Default-EW/providers/Microsoft.Network/publicIPAddresses/vpnGateway-PIP\"},\"subnet\":{\"id\":\"/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourceGroups/RG-Default-EW/providers/Microsoft.Network/virtualNetworks/vpnGateway-LocalVNet/subnets/GatewaySubnet\"}}}],\"sku\":{\"name\":\"Basic\",\"tier\":\"Basic\",\"capacity\":2},\"gatewayType\":\"Vpn\",\"vpnType\":\"RouteBased\",\"enableBgp\":false,\"activeActive\":false,\"vpnClientConfiguration\":{\"vpnClientProtocols\":[],\"vpnClientRootCertificates\":[],\"vpnClientRevokedCertificates\":[]}}}"
+    },
+    "relatedEvents": []
+}

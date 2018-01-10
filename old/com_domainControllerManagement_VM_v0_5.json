@@ -1,0 +1,268 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            },
+            "defaultValue": "no-pci",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ]
+        },
+        "environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            },
+            "defaultValue": "development",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ]
+        },
+        "virtualNetworkName": {
+            "type": "string",
+            "defaultValue": "comit-vnet",
+            "metadata": {
+                "description": "Name of the existing vNet where the VM will be deployed"
+            }
+        },
+        "subnetName": {
+            "type": "string",
+            "defaultValue": "domainControllerMgmtSubnet",
+            "metadata": {
+                "description": "Name for the Domain Controller Management Subnet"
+            }
+        },
+        "SubnetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.0.8/29",
+            "metadata": {
+                "description": "CIDR block for Domain Controller Management Subnet"
+            }
+        },
+        "virtualMachineName": {
+            "type": "string",
+            "defaultValue": "DCMgmt",
+            "metadata": {
+                "description": "Name of the VM to create"
+            }
+        },
+        "virtualMachineSize": {
+            "type": "string",
+            "defaultValue": "Standard_D1_v2",
+            "metadata": {
+                "description": "Size of the VM"
+            }
+        },
+        "networkInterfaceName": {
+            "type": "string",
+            "defaultValue": "comitpew-nic",
+            "metadata": {
+                "description": "Name for the NIC of the VM"
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "adminAccenture",
+            "metadata": {
+                "description": "Name of admin user"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "defaultValue": "Accenture01!",
+            "metadata": {
+                "description": "Password for admin user of VM"
+            }
+        },
+        "storageAccountType": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS"
+            ],
+            "metadata": {
+                "description": "Type of the Storage Account"
+            }            
+        }
+    },
+    "variables": {     
+        "api-version": "2016-03-30",
+        "storage-api-version": "2016-01-01",
+        "storageAccountName": "[concat(uniquestring(resourceGroup().id), 'dcmgmtvm')]",
+        "subnetRef": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworkName'), parameters('subnetName'))]"
+    },
+    "resources": [
+        {
+            "name": "[variables('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",            
+            "apiVersion": "[variables('storage-api-version')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "sku": {
+              "name": "[parameters('storageAccountType')]"
+            },
+            "kind": "Storage",
+            "properties": {}
+          },
+        {
+            "name": "[concat(parameters('virtualNetworkName'), '/', parameters('subnetName'))]",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "addressPrefix": "[parameters('SubnetAddressPrefix')]"
+            }
+        },
+        {
+            "name": "[parameters('networkInterfaceName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "[variables('api-version')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }                            
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('virtualMachineName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', parameters('networkInterfaceName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"                
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('virtualMachineSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('virtualMachineName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": "true"
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter",
+                        "version": "latest"
+                    },                
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    },
+                    "dataDisks": [
+                    {
+                        "diskSizeGB": 1023,
+                        "lun": 0,
+                        "createOption": "Empty"
+                    }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaceName'))]"
+                        }
+                    ]
+                },
+                "licenseType": "Windows_Server",
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))).primaryEndpoints.blob]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "microsoft.antimalware-windows-20170925144054",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "https://gallery.azure.com/artifact/20161101/microsoft.antimalware-windows-arm.1.0.0/Artifacts/MainTemplate.json"
+                },
+                "parameters": {
+                    "vmName": {
+                        "value": "[parameters('virtualMachineName')]"
+                    },
+                    "location": {
+                        "value": "[resourceGroup().location]"
+                    },
+                    "RealtimeProtectionEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsIsEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsScanType": {
+                        "value": "Quick"
+                    },
+                    "ScheduledScanSettingsDay": {
+                        "value": "1"
+                    },
+                    "ScheduledScanSettingsTime": {
+                        "value": "120"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('virtualMachineName'))]"
+            ]
+        }
+    ],
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        }
+    }
+}

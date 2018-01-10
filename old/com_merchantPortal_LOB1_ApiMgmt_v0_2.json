@@ -1,0 +1,316 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            },
+            "defaultValue": "no-pci",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ]
+        },
+        "environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            },
+            "defaultValue": "development",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ]
+        },
+        "vNetName": {
+            "type": "string",
+            "defaultValue": "commp-vnet",
+            "metadata": {
+                "description": "Name for the Virtual Network (vNet)"
+            }
+        },
+        "vNetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.25.0/27",
+            "metadata": {
+                "description": "CIDR block for the vNet"
+            }
+        },
+        "subnetApiMgmtName": {
+            "type": "string",
+            "defaultValue": "commptew",
+            "metadata": {
+                "description": "Name for API Manager Subnet"
+            }
+        },
+        "subnetApiMgmtAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.25.0/27",
+            "metadata": {
+                "description": "CIDR block for API Manager Subnet"
+            }
+        },
+        "NSGNameApiMgmt": {
+            "type": "string",
+            "defaultValue": "comit-apiManager-nsg",
+            "metadata": {
+                "description": "Network Security Group Name for API Manager Subnet"
+            }
+        },
+        "DNSAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.0.0/29",
+            "metadata": {
+                "description": "DNS IP Address"
+            }
+        },
+        "apiMgmt_name": {
+            "type": "string",
+            "metadata": {
+                "description": "API Manager name"
+            },
+            "defaultValue": "apiName"
+        },
+        "apiMgmt_AdminEmail": {
+            "type": "string",
+            "metadata": {
+                "description": "Email for emails and alerts"
+            },
+            "defaultValue": "testemail@hotmail.com"
+        },
+        "apiMgmt_OrgName": {
+            "type": "string",
+            "metadata": {
+                "description": "Organization Name for emails and alerts"
+            },
+            "defaultValue": "TestOrg"
+        }        
+    },
+    "variables": {     
+        "apiMgmt_SKU": "Developer",
+        "api-version": "2015-06-15",
+        "subnetRef": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', parameters('vNetName'), parameters('subnetApiMgmtName'))]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[parameters('NSGNameApiMgmt')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "securityRules": [
+                    {
+                    "name": "Allow-Out-DC1",
+                        "properties": {
+                            "description": "NTP Sync Primary Domain Controller",
+                            "protocol": "UDP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "123",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Allow-Out-DC2",
+                        "properties": {
+                            "description": "AD RPC Primary DC",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "135",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 101,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Allow-Out-DC3",
+                        "properties": {
+                            "description": "AD Kerberos change Primary DC",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "464",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 103,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Allow-Out-DC4",
+                        "properties": {
+                            "description": "AD LDAP Primary DC",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "389",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 104,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Allow-Out-DC5",
+                        "properties": {
+                            "description": "AD LDAP GC Primary DC",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3265",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 105,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Allow-Out-DC6",
+                        "properties": {
+                            "description": "AD DNS Primary DC",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "53",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 106,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Allow-Out-DC7",
+                        "properties": {
+                            "description": "AD Kerberos Primary DC",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "88",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 107,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Allow-Out-DC8",
+                        "properties": {
+                            "description": "AD SMB Primary DC",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "445",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 108,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Allow-Out-DC9",
+                        "properties": {
+                            "description": "AD DYN Primary DC",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "49152-65535",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 109,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                    "name": "Deny-Out-DC",
+                        "properties": {
+                            "description": "Deny all other Outbound traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Deny",
+                            "priority": 110,
+                            "direction": "Outbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "[variables('api-version')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('vNetName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', parameters('NSGNameApiMgmt'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vNetAddressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('subnetApiMgmtName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetApiMgmtAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('NSGNameApiMgmt'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2016-10-10",
+            "name": "[parameters('apiMgmt_name')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "type": "Microsoft.ApiManagement/service",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('vNetName'))]"
+            ],
+            "sku": {
+                "name": "[variables('apiMgmt_SKU')]",
+                "capacity": 1
+            },
+            "properties": {
+                "publisherEmail": "[parameters('apiMgmt_AdminEmail')]",
+                "publisherName": "[parameters('apiMgmt_OrgName')]",
+                "VirtualNetworkConfiguration": {
+                    "type": "object",
+                    "properties": {
+                        "subnetResourceId": "[variables('subnetRef')]",
+                        "location": "[resourceGroup().location]"
+                    }
+                },
+                "virtualNetworkType": "None"
+            }
+        }        
+    ]
+}

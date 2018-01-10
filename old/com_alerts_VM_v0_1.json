@@ -1,0 +1,367 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ],
+            "defaultValue": "no-pci",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            }
+        },
+        "environment": {
+            "type": "string",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ],
+            "defaultValue": "development",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            }
+        },
+        "DNSServerAddress": {
+            "type": "string",
+            "defaultValue": "168.63.129.16",
+            "metadata": {
+                "description": "Domain Name Server"
+            }
+        },
+        "VNETName": {
+            "type": "string",
+            "defaultValue": "com-vnet",
+            "metadata": {
+                "description": "Name for the Virtual Network (vNet)"
+            }
+        },
+        "VNETAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/24",
+            "metadata": {
+                "description": "CIDR block for the vNet"
+            }
+        },
+        "SubnetName": {
+            "type": "string",
+            "defaultValue": "comtew",
+            "metadata": {
+                "description": "Name for Virtual Machine (VM)"
+            }
+        },
+        "SubnetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/24",
+            "metadata": {
+                "description": "CIDR block for Virtual Machine (VM)"
+            }
+        },
+        "NameForNSGOfVM": {
+            "type": "string",
+            "defaultValue": "com-nsg",
+            "metadata": {
+                "description": "Network Security Group Name for Virtual Machine (VM)"
+            }
+        },   
+        "VmName": {
+            "type": "string",
+            "defaultValue": "comsttew",
+            "metadata": {
+                "description": "Name for Virtual Machine (VM)"
+            }
+        },
+        "VmSize": {
+            "type": "string",
+            "defaultValue": "Standard_A4_v2",
+            "metadata": {
+                "description": "Size of the Virtual Machine (VM)"
+            }
+        },
+        "VmAdminUsername": {
+            "type": "string",
+            "defaultValue": "systemAdmin",
+            "metadata": {
+                "description": "Name of admin user of the Virtual Machine (VM)"
+            }
+        },
+        "VmAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "PassWord012!",
+            "metadata": {
+                "description": "Password for admin user of Virtual Machine (VM)"
+            }
+        },
+        "IPAlerta": {
+            "type": "string",
+            "defaultValue": "213.0.68.223",
+            "metadata": {
+                "description": "IP of ALERTA"
+            }
+        },
+        "IPIngenico": {
+            "type": "string",
+            "metadata": {
+                "description": "IP of INGENICO"
+            }
+        }
+    },
+    "variables": {
+        "subnetRef": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', parameters('VNETName'), parameters('SubnetName'))]",
+        "VmNicName": "[concat(parameters('VmName'),'-nic')]"
+    },
+    "resources": [
+        {           
+            "name": "[parameters('NameForNSGOfVM')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2015-05-01-preview",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [   
+                    {
+                        "name": "allow-rdp-inbound",
+                        "properties": {
+                            "description": "RDP Management (TCP/3389)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "[parameters('IPAlerta')]",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 110,
+                            "direction": "Inbound"
+                        }
+                    },  
+                    {
+                        "name": "allow-ingenico-inbound",
+                        "properties": {
+                            "description": "INGENICO (TCP/10000)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "10000",
+                            "sourceAddressPrefix": "[parameters('IPIngenico')]",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 440,
+                            "direction": "Inbound"
+                        }
+                    },  
+                    {
+                        "name": "deny-all-inbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "allow-rdp-outbound",
+                        "properties": {
+                            "description": "RDP Management (TCP/3389)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "3389",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('IPAlerta')]",
+                            "access": "Allow",
+                            "priority": 110,
+                            "direction": "Outbound"
+                        }
+                    },  
+                    {
+                        "name": "allow-ingenico-outbound",
+                        "properties": {
+                            "description": "INGENICO (TCP/10000)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "10000",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('IPIngenico')]",
+                            "access": "Allow",
+                            "priority": 440,
+                            "direction": "Outbound"
+                        }
+                    }, 
+                    {
+                        "name": "deny-all-outbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    }                               
+                ]
+            }
+        },
+        {
+            "name": "[parameters('VNETName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2015-06-15",             
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', parameters('NameForNSGOfVM'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('VNETAddressPrefix')]"
+                    ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": [
+                        "[parameters('DNSServerAddress')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('SubnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('SubnetAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('NameForNSGOfVM'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[variables('VmNicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('VNETName'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[concat('ipconfig-',parameters('VmName'))]",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }                            
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('VmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",            
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('VmNicName'))]"       
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "alm"
+            },
+            "properties": {
+                "licenseType": "Windows_Server",
+                "hardwareProfile": {
+                    "vmSize": "[parameters('VmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('VmName')]",
+                    "adminUsername": "[parameters('VmAdminUsername')]",
+                    "adminPassword": "[parameters('VmAdminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": "true"
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter",
+                        "version": "latest"
+                    },                
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Standard_LRS"
+                        }
+                    },
+                    "dataDisks": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('VmNicName'))]"
+                        }
+                    ]
+                }                
+            }
+        },
+        {
+            "name": "microsoft.antimalware-windows-20170925144054",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('VmName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://gallery.azure.com/artifact/20161101/microsoft.antimalware-windows-arm.1.0.0/Artifacts/MainTemplate.json"
+                },
+                "parameters": {
+                    "vmName": {
+                        "value": "[parameters('VmName')]"
+                    },
+                    "location": {
+                        "value": "[resourceGroup().location]"
+                    },
+                    "RealtimeProtectionEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsIsEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsScanType": {
+                        "value": "Quick"
+                    },
+                    "ScheduledScanSettingsDay": {
+                        "value": "1"
+                    },
+                    "ScheduledScanSettingsTime": {
+                        "value": "120"
+                    }
+                }
+            }
+        }                
+    ]
+}

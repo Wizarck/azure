@@ -1,0 +1,257 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ],
+            "defaultValue": "no-pci",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            }
+        },
+        "environment": {
+            "type": "string",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ],
+            "defaultValue": "development",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            }
+        },
+        "workspaceName": {
+            "type": "string",
+            "allowedValues": [
+				"Workspace1Test",
+                "Workspace2Test"
+            ],
+            "defaultValue": "Workspace1Test",
+            "metadata": {
+                "description": "Define Workspace"
+            }
+        },
+        "workspaceRG": {
+            "type": "string",
+            "defaultValue": "RG-TEST-1",
+            "metadata": {
+                "description": "Resource Group of the Workspace"
+            }
+        },
+        "virtualNetworkSuscriptionID": {
+            "type":"string",
+            "defaultValue": "ea645d5f-08ed-4f30-a964-e13952e55328",
+            "metadata": {
+                "description": "Suscription ID of Virtual Network"
+            }
+        },
+        "virtualNetworkResourceGroup": {
+            "type": "string",
+            "defaultValue": "RG-TEST-1",
+            "metadata": {
+                "description": "Resource Group of Virtual Network"
+            }
+        },
+        "MonitoringVNET": {
+            "type": "string",
+            "defaultValue": "vnetTest2",
+            "metadata": {
+                "description": "Name of the existing vNet"
+            }
+        },
+        "SubnetName": {
+            "type": "string",
+            "defaultValue": "subnetTest1",
+            "metadata": {
+                "description": "Name of the existing Subnet that will contain the VM"
+            }
+        },
+        "AddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.31.0/27",
+            "metadata": {
+                "description": "Subnet CIDR"
+            }
+        },        
+        "VmName": {
+            "type": "string",
+            "defaultValue": "VM-LINUXTEST1",
+            "metadata": {
+                "description": "Name for the VM"
+            }
+        },
+        "VmAdminUsername": {
+            "type": "string",
+            "defaultValue": "systemAdmin",
+            "metadata": {
+                "description": "Name of admin user of VM"
+            }
+        },
+        "VmAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "PassWord0123!",
+            "metadata": {
+                "description": "Password for admin user of VM"
+            }
+        }
+    },
+    "variables": {     
+        "VmSize": "Standard_D1_v2",
+        "VmNicName": "[concat(parameters('VmName'),'-nic')]",
+        "subnetRef": "[resourceId(parameters('virtualNetworkSuscriptionID'),parameters('virtualNetworkResourceGroup'),'Microsoft.Network/virtualNetworks/subnets', parameters('MonitoringVNET'), parameters('SubnetName'))]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-05-10",
+            "name": "VirtualNetworkExternalDeployment",
+            "type": "Microsoft.Resources/deployments",
+            "resourceGroup": "[parameters('VirtualNetworkResourceGroup')]",
+            "properties": {
+                "mode": "Incremental",
+                "template": {
+                    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {},
+                    "variables": {},
+                    "resources": [
+                        {
+                            "name": "[concat(parameters('MonitoringVNET'), '/', parameters('subnetName'))]",
+                            "type": "Microsoft.Network/virtualNetworks/subnets",
+                            "apiVersion": "2015-06-15",
+                            "location": "[resourceGroup().location]",
+                            "tags": {
+                                "complianceProfile": "[parameters('complianceProfile')]",
+                                "environment": "[parameters('environment')]",
+                                "tier": "communications"
+                            },
+                            "properties": {
+                                "addressPrefix": "[parameters('AddressPrefix')]"
+                            }
+                        }
+                    ]
+                },
+            "parameters": {}
+            }
+        },
+        {
+            "name": "[variables('VmNicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Resources/deployments/','VirtualNetworkExternalDeployment')]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[concat('ipconfig-',parameters('VmName'))]",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }                            
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('VmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('VmNicName'))]"         
+            ],
+            "properties": {
+                "osProfile": {
+                    "computerName": "[parameters('VmName')]",
+                    "adminUsername": "[parameters('VmAdminUsername')]",
+                    "adminPassword": "[parameters('VmAdminPassword')]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[variables('VmSize')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "16.04-LTS",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "fromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Standard_LRS"
+                        }
+                    },
+                    "dataDisks": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('VmNicName'))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('VmName'),'/OMSExtension')]",
+            "apiVersion": "2015-06-15",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                "type": "MicrosoftMonitoringAgent",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "workspaceId": "[reference(resourceId(parameters('workspaceRG'),'Microsoft.OperationalInsights/workspaces/', parameters('workspaceName')), '2015-03-20').customerId]"
+                },
+                "protectedSettings": {
+                    "workspaceKey": "[listKeys(resourceId(parameters('workspaceRG'),'Microsoft.OperationalInsights/workspaces/', parameters('workspaceName')), '2015-03-20').primarySharedKey]"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('vmName'),'/DependencyAgent')]",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+            ],
+            "properties": {
+              "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+              "type": "DependencyAgentLinux",
+              "typeHandlerVersion": "9.1",
+              "autoUpgradeMinorVersion": true
+            }
+        }
+    ],
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[parameters('VmAdminUsername')]"
+        }
+    }
+}

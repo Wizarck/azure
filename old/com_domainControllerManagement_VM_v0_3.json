@@ -1,0 +1,256 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualNetworkName": {
+            "type": "string",
+            "defaultValue": "comit-vnet",
+            "metadata": {
+                "description": "Name of the existing vNet where the VM will be deployed"
+            }
+        },
+        "subnetName": {
+            "type": "string",
+            "defaultValue": "domainControllerManagementSubnet",
+            "metadata": {
+                "description": "Name for the Domain Controller Management Subnet"
+            }
+        },
+        "SubnetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.0.8/29",
+            "metadata": {
+                "description": "CIDR block for Domain Controller Management Subnet"
+            }
+        },
+        "virtualMachineName": {
+            "type": "string",
+            "defaultValue": "domainControllerManagement",
+            "metadata": {
+                "description": "Name of the VM to create"
+            }
+        },
+        "virtualMachineSize": {
+            "type": "string",
+            "defaultValue": "Standard_D1_v2",
+            "metadata": {
+                "description": "Size of the VM"
+            }
+        },
+        "networkInterfaceName": {
+            "type": "string",
+            "defaultValue": "comitpew-nic",
+            "metadata": {
+                "description": "Name of the sample VM to create"
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "defaultValue": "admin",
+            "metadata": {
+                "description": "Name of admin user"
+            }
+        },
+        "adminPassword": {
+            "type": "string",
+            "defaultValue": "Accenture01!",
+            "metadata": {
+                "description": "Password for admin user of VM"
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "storagevmdc",
+            "metadata": {
+                "description": "Storage Account Name for VM Disk"
+            }
+        },
+        "storageAccountType": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS"
+            ],
+            "metadata": {
+                "description": "Type of the Storage Account"
+            }            
+        },
+        "diagnosticsStorageAccountName": {
+            "type": "string",
+            "defaultValue": "storagevmdiagdc",
+            "metadata": {
+                "description": "Name for the Diagnostic Storage"
+            }
+        },
+        "diagnosticsStorageAccountType": {
+            "type": "string",
+            "defaultValue": "Premium_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS"
+            ],            
+            "metadata": {
+                "description": "Type of Diagnostic Storage"
+            }
+        }
+    },
+    "variables": {
+        "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+        "subnetRef": "[concat(variables('vnetId'), '/subnets/', parameters('subnetName'))]",
+        "storage-api-version": "2015-05-01-preview",
+        "vmStorageAccountContainerName": "vhds",
+        "OSDiskName": "osDisk",
+        "api-version": "2015-06-15"
+    },
+    "resources": [
+        {
+            "name": "[parameters('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "[variables('api-version')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "accountType": "[parameters('storageAccountType')]"
+            }
+        },
+        {
+            "name": "[parameters('diagnosticsStorageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "[variables('api-version')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "accountType": "[parameters('diagnosticsStorageAccountType')]"
+            }
+        },
+        {
+            "name": "[concat(parameters('virtualNetworkName'), '/', parameters('subnetName'))]",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "[variables('api-version')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "addressPrefix": "[parameters('SubnetAddressPrefix')]"
+            }
+        },
+        {
+            "name": "[parameters('virtualMachineName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "[variables('api-version')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', parameters('networkInterfaceName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', parameters('diagnosticsStorageAccountName'))]"
+            ],
+            "properties": {
+                "osProfile": {
+                    "computerName": "[parameters('virtualMachineName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": "true"
+                    }
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('virtualMachineSize')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "osdisk1",
+                        "vhd": {
+                          "uri": "[concat('http://',parameters('storageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/',variables('OSDiskName'),'.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                      }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaceName'))]"
+                        }
+                    ]
+                },
+                "licenseType": "Windows_Server",
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', parameters('diagnosticsStorageAccountName')), variables('api-version')).primaryEndpoints['blob']]"
+                    }
+                }
+            }
+        },
+        {
+            "name": "microsoft.antimalware-windows-20170925144054",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "properties": {
+                "mode": "incremental",
+                "templateLink": {
+                    "uri": "https://gallery.azure.com/artifact/20161101/microsoft.antimalware-windows-arm.1.0.0/Artifacts/MainTemplate.json"
+                },
+                "parameters": {
+                    "vmName": {
+                        "value": "test"
+                    },
+                    "location": {
+                        "value": "[resourceGroup().location]"
+                    },
+                    "RealtimeProtectionEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsIsEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsScanType": {
+                        "value": "Quick"
+                    },
+                    "ScheduledScanSettingsDay": {
+                        "value": "1"
+                    },
+                    "ScheduledScanSettingsTime": {
+                        "value": "120"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('virtualMachineName'))]"
+            ]
+        },
+        {
+            "name": "[parameters('networkInterfaceName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "[variables('api-version')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic"
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "adminUsername": {
+            "type": "string",
+            "value": "[parameters('adminUsername')]"
+        }
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "complianceProfile": {
+        "value": "no-pci"
+      },
+      "environment": {
+        "value": "development"
+      },
+      "virtualNetworkResourceGroup": {
+        "value": "commp-t-rg1"
+      },
+      "AppName": {
+        "value": "myappname123"
+      },
+      "hostingEnvironment": {
+        "value": "commpaetew"
+      },
+      "serverFarmID": {
+        "value": "/subscriptions/62a7eff2-17e0-4cee-82a0-666c5c1ee7f0/resourceGroups/commp-t-rg1/providers/Microsoft.Web/serverfarms/commpaetew-windows-sp1"
+      },
+      "SQLServerName": {
+        "value": "commpsqtew"
+      },
+      "SQLAdminLogin": {
+        "value": "sqlServerSysAdmin"
+      },
+      "SQLAdminLoginPassword": {
+        "value": "k@PK=#fY_%xC4s39tPgsz^n"
+      },
+      "SQLDataBaseName": {
+        "value": "sqldbnamesysadmin2"
+      },
+      "AppInsightName": {
+        "value": "commpistew1"
+      }
+    }
+  }

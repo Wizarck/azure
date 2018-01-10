@@ -1,0 +1,288 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            },
+            "defaultValue": "no-pci",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ]
+        },
+        "environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            },
+            "defaultValue": "development",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ]
+        },
+        "DNSAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.0.0/29",
+            "metadata": {
+                "description": "DNS IP Address"
+            }
+        },
+        "LDAPAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.0.112/28",
+            "metadata": {
+                "description": "LDAP IP Address"
+            }
+        },
+        "vNetName": {
+            "type": "string",
+            "defaultValue": "commp-vnet1",
+            "metadata": {
+                "description": "Name for the Virtual Network (vNet)"
+            }
+        },
+        "vNetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.25.32/27",
+            "metadata": {
+                "description": "CIDR block for the vNet"
+            }
+        },
+        "subnetAppServName": {
+            "type": "string",
+            "defaultValue": "commptew1",
+            "metadata": {
+                "description": "Name for App Services LOB-1 Subnet"
+            }
+        },
+        "subnetAppServAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.25.32/28",
+            "metadata": {
+                "description": "CIDR block for App Services LOB-1 Subnet"
+            }
+        },
+        "NSGNameAppServ": {
+            "type": "string",
+            "defaultValue": "comit-LOB1-nsg",
+            "metadata": {
+                "description": "Network Security Group Name for App Services LOB-1 Subnet"
+            }
+        },
+        "subnetHostAgentName": {
+            "type": "string",
+            "defaultValue": "commptew2",
+            "metadata": {
+                "description": "Name for Host Agent LOB-1 Subnet"
+            }
+        },
+        "subnetHostAgentAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.25.56/29",
+            "metadata": {
+                "description": "CIDR block for Host Agent LOB-1 Subnet"
+            }
+        },
+        "NSGNameHostAgent": {
+            "type": "string",
+            "defaultValue": "comit-LOB2-nsg",
+            "metadata": {
+                "description": "Network Security Group Name for App Services LOB-1 Subnet"
+            }
+        }
+    },
+    "variables": {
+        "api-version": "2015-06-15"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[parameters('NSGNameHostAgent')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [            
+                    {
+                    "name": "allow-https",
+                        "properties": {
+                            "description": "HTTPS Azure Sync (TCP/443)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 120,
+                            "direction": "Outbound"
+                        }
+                    },    
+                    {
+                    "name": "allow-ldap-1",
+                        "properties": {
+                            "description": "LDAP (TCP/636)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "636",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('LDAPAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 130,
+                            "direction": "Outbound"
+                        }
+                    },          
+                    {
+                    "name": "allow-dns",
+                        "properties": {
+                            "description": "DNS (TCP/53)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "53",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 200,
+                            "direction": "Outbound"
+                        }
+                    }, 
+                    {
+                    "name": "deny-all",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    }                    
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[parameters('NSGNameAppServ')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [         
+                    {
+                    "name": "allow-https",
+                        "properties": {
+                            "description": "HTTPS Azure Sync (TCP/443)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 120,
+                            "direction": "Outbound"
+                        }
+                    },    
+                    {
+                    "name": "allow-ldap-1",
+                        "properties": {
+                            "description": "LDAP (TCP/636)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "636",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('LDAPAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 130,
+                            "direction": "Outbound"
+                        }
+                    },          
+                    {
+                    "name": "allow-dns",
+                        "properties": {
+                            "description": "DNS (TCP/53)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "53",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "[parameters('DNSAddressPrefix')]",
+                            "access": "Allow",
+                            "priority": 200,
+                            "direction": "Outbound"
+                        }
+                    }, 
+                    {
+                    "name": "deny-all",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "[variables('api-version')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('vNetName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', parameters('NSGNameAppServ'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', parameters('NSGNameHostAgent'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('vNetAddressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('subnetAppServName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetAppServAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('NSGNameAppServ'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[parameters('subnetHostAgentName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetHostAgentAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('NSGNameHostAgent'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}

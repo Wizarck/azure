@@ -1,0 +1,857 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.16",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ],
+            "defaultValue": "no-pci",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            }
+        },
+        "environment": {
+            "type": "string",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ],
+            "defaultValue": "development",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            }
+        },
+        "PALocation": { 
+            "type": "string",             
+            "allowedValues": [ 
+                "North Europe", 
+                "West Europe"
+            ], 
+            "defaultValue": "West Europe",
+            "metadata": {
+                "description": "Location for the Palo Alto Firewall"
+            }
+        },     
+        "PAManagementPrefix": {
+            "type": "string",
+            "defaultValue": "0.0.0.0/0",
+            "metadata": {
+                "description": "Management IP address Prefix"
+            }            
+        },
+        "PAVmName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of Palo Alto Firewall"
+            },
+            "defaultValue": "comitappew"
+        },
+        "PAVmSize": {
+            "type": "string",
+            "allowedValues": [
+                "Standard_D3",
+                "Standard_D4",
+                "Standard_D3_v2",
+                "Standard_D4_v2",
+                "Standard_D5_v2",
+                "Standard_A4"
+            ],
+            "metadata": {
+                "description": "VM size for Palo Alto Firewall"
+            },
+            "defaultValue": "Standard_D3_v2"
+        },
+        "virtualNetworkName": {
+            "type": "string",
+            "defaultValue": "panVnet",
+            "metadata": {
+                "description": "Name of the Virtual Network (VNET)"
+            }           
+        },
+        "virtualNetworkAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.24.0/25",
+            "metadata": {
+                "description": "Virtual network address CIDR"
+            }
+        },        
+        "dmzManagementPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.24.80/28",
+            "metadata": {
+                "description": "dmzManagement subnet CIDR"
+            }
+        },
+        "dmzTrustedPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.24.64/28",
+            "metadata": {
+                "description": "dmzTrusted subnet CIDR"
+            }
+        },
+        "dmzPublicUntrustedPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.24.32/28",
+            "metadata": {
+                "description": "dmzPublicUntrusted subnet CIDR"
+            }
+        },
+        "dmzPrivateUntrustedPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.24.48/28",
+            "metadata": {
+                "description": "dmzPrivateUntrusted subnet CIDR"
+            }
+        },
+        "PAAdminUsername": {
+            "type": "string",
+            "defaultValue": "systemAdmin",
+            "metadata": {
+                "description": "Username of the administrator account of Palo Alto Firewall"
+            }
+        },
+        "PAAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "PassWord012!",
+            "metadata": {
+                "description": "Password for the administrator account of Palo Alto Firewall"
+            }
+        },
+        "PAPublicIPAddressName": {
+            "type": "string",
+            "defaultValue": "comitappew-pip0",
+            "metadata": {
+                "description": "Name of existing public IP resource"
+            }
+        },
+        "PAStorageAccountName": {
+            "type": "string",
+            "defaultValue": "storageaccountpa",
+            "metadata": {
+                "description": "Name prefix of the new storage account created to store the Palo Alto Firewall's disks"
+            }
+        },
+        "PAStorageAccountSKU": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS"
+            ],
+            "metadata": {
+                "description": "SKU for Palo Alto Storage Account"
+            }            
+        },        
+        "AppGatewayPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Applicaton Gateway subnet CIDR"
+            }
+        },        
+        "VpnPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "VPN Route subnet CIDR"
+            }
+        },        
+        "dmzL7PublicFrontEndPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "DMZ L7 Public Front End Route subnet CIDR"
+            }
+        },        
+        "vpnGatewayPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "VPN Grateway subnet CIDR"
+            }
+        }
+    },
+    "variables": {
+        "imagePublisher": "paloaltonetworks",
+        "imageSku": "byol",
+        "imageOffer": "vmseries1",
+        "imageVersion": "8.0.0",
+        "NameForNSGOfPA": "comit-dmzManagement-nsg",
+        "NameForNSGOfDMZPublicUntrusted": "comit-dmzPublicUntrusted-nsg",
+        "NameForNSGOfDMZPrivateUntrusted": "comit-dmzPrivateUntrusted-nsg",
+        "NameForNSGOfDMZTrusted": "comit-dmzTrusted-nsg",
+        "nicName": "[concat(parameters('PAVmName'), '-nic')]",
+        "subnet0Name": "dmzManagement",        
+        "subnet1Name": "dmzTrusted",
+        "subnet2Name": "dmzPublicUntrusted",
+        "subnet3Name": "dmzPrivateUntrusted",
+        "subnet0Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets/',parameters('virtualNetworkName'),variables('subnet0Name'))]",
+        "subnet1Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets/',parameters('virtualNetworkName'),variables('subnet1Name'))]",
+        "subnet2Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets/',parameters('virtualNetworkName'),variables('subnet2Name'))]",
+        "subnet3Ref": "[resourceId('Microsoft.Network/virtualNetworks/subnets/',parameters('virtualNetworkName'),variables('subnet3Name'))]",
+        "publicIPAddressType": "Dynamic"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[parameters('PAStorageAccountName')]",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PALocation')]",
+            "properties": {
+                "accountType": "[parameters('PAStorageAccountSKU')]"
+            }
+        },
+        {
+            "name": "[parameters('PAPublicIPAddressName')]",            
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+              "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
+              "dnsSettings": {
+                "domainNameLabel": "[parameters('PAPublicIPAddressName')]"
+              }
+            }
+        },
+        {            
+            "name": "[variables('NameForNSGOfPA')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "allow-sshManagement",
+                        "properties": {
+                            "description": "SSH Management (TCP/22)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "[parameters('PAManagementPrefix')]",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 160,
+                            "direction": "Inbound"
+                        }
+                    }, 
+                    {
+                        "name": "https-inbound",
+                        "properties": {
+                            "description": "Allow intra network traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "443",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "INTERNET",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 300,
+                            "direction": "Inbound"
+                        }
+                    }, 
+                    {
+                        "name": "deny-all-inbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-outbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {            
+            "name": "[variables('NameForNSGOfDMZPublicUntrusted')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "allow-applicationGateway-inbound",
+                        "properties": {
+                            "description": "Application Gateway to FW (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "[parameters('AppGatewayPrefix')]",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 160,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "allow-azureLoadBalancer",
+                        "properties": {
+                            "description": "Load Balancer Azure (TCP/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "AzureLoadBalancer",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 510,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-inbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "allow-all-internet",
+                        "properties": {
+                            "description": "FW to Internet (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 170,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-outbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    }
+
+                ]
+            }
+        },
+        {            
+            "name": "[variables('NameForNSGOfDMZPrivateUntrusted')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "allow-vpnRoute-inbound",
+                        "properties": {
+                            "description": "VPN Inbound Routes (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "[parameters('VpnPrefix')]",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 440,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-inbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "allow-vpnRoute-outbound",
+                        "properties": {
+                            "description": "VPN Outbound Routes (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "[parameters('VpnPrefix')]",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 440,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-outbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    }
+
+                ]
+            }
+        },
+        {            
+            "name": "[variables('NameForNSGOfDMZTrusted')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "deny-vpnRoute-inbound",
+                        "properties": {
+                            "description": "VPN Inbound Routes (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "[parameters('VpnPrefix')]",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Deny",
+                            "priority": 440,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "allow-vnetInternals",
+                        "properties": {
+                            "description": "Internal Comunication (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 500,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "allow-azureLoadBalancer",
+                        "properties": {
+                            "description": "Load Balancer Azure (TCP/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "AzureLoadBalancer",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 510,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-inbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "deny-dmzPublicUntrusted",
+                        "properties": {
+                            "description": "DmzPublicUntrusted Deny (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "[parameters('dmzPublicUntrustedPrefix')]",
+                            "access": "Deny",
+                            "priority": 450,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "deny-dmzPrivateUntrusted",
+                        "properties": {
+                            "description": "DmzPrivateUntrusted Deny (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "[parameters('dmzPrivateUntrustedPrefix')]",
+                            "access": "Deny",
+                            "priority": 460,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "deny-dmzL7",
+                        "properties": {
+                            "description": "DmzL7 Deny (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "[parameters('dmzL7PublicFrontEndPrefix')]",
+                            "access": "Deny",
+                            "priority": 470,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "deny-vpnGateway",
+                        "properties": {
+                            "description": "VpnGateway Deny (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "[parameters('vpnGatewayPrefix')]",
+                            "access": "Deny",
+                            "priority": 480,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "allow-vnetInternals",
+                        "properties": {
+                            "description": "Internal Comunication (*/*)",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 500,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-outbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    }
+
+                ]
+            }
+        },
+        {
+            "name": "[parameters('virtualNetworkName')]",
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",            
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('NameForNSGOfPA'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('NameForNSGOfDMZPublicUntrusted'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('NameForNSGOfDMZPrivateUntrusted'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('NameForNSGOfDMZTrusted'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+              "addressSpace": {
+                "addressPrefixes": [
+                  "[parameters('virtualNetworkAddressPrefix')]"
+                ]
+              },
+              "subnets": [
+                {
+                    "name": "[variables('subnet0Name')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('dmzManagementPrefix')]",
+                        "networkSecurityGroup": {
+                            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('NameForNSGOfPA'))]"
+                        }
+                    }
+                },
+                {
+                    "name": "[variables('subnet1Name')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('dmzTrustedPrefix')]",
+                        "networkSecurityGroup": {
+                            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('NameForNSGOfDMZTrusted'))]"
+                        }
+                    }
+                },
+                {
+                    "name": "[variables('subnet2Name')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('dmzPublicUntrustedPrefix')]",
+                        "networkSecurityGroup": {
+                            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('NameForNSGOfDMZPublicUntrusted'))]"
+                        }
+                    }
+                },
+                {
+                    "name": "[variables('subnet3Name')]",
+                    "properties": {
+                        "addressPrefix": "[parameters('dmzPrivateUntrustedPrefix')]",
+                        "networkSecurityGroup": {
+                            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('NameForNSGOfDMZTrusted'))]"
+                        }
+                    }
+                }
+              ]
+            }
+        },
+        {
+            "name": "[concat(variables('nicName'), '0')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",            
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+              "ipConfigurations": [
+                {
+                    "name": "[concat('ipconfig-',variables('subnet0Name'))]",
+                  "properties": {
+                    "privateIPAllocationMethod": "Dynamic",
+                    "publicIPAddress": {
+                       "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('PAPublicIPAddressName'))]"
+                    },
+                    "subnet": {
+                      "id": "[variables('subnet0Ref')]"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "[concat(variables('nicName'), '1')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",            
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+            "enableIPForwarding": true,
+              "ipConfigurations": [
+                {
+                    "name": "[concat('ipconfig-',variables('subnet1Name'))]",
+                    "properties": {
+                    "privateIPAllocationMethod": "Dynamic",
+                    "subnet": {
+                      "id": "[variables('subnet1Ref')]"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "[concat(variables('nicName'), '2')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]", 
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+              "enableIPForwarding": true,
+              "ipConfigurations": [
+                {
+                  "name": "[concat('ipconfig-',variables('subnet2Name'))]",
+                  "properties": {
+                    "subnet": {
+                      "id": "[variables('subnet2Ref')]"
+                    }
+                  }
+                }
+              ]
+            }
+        },
+        {
+            "name": "[concat(variables('nicName'), '3')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+              "enableIPForwarding": true,
+              "ipConfigurations": [
+                {
+                  "name": "[concat('ipconfig-',variables('subnet3Name'))]",
+                  "properties": {
+                    "subnet": {
+                      "id": "[variables('subnet3Ref')]"
+                    }
+                  }
+                }
+              ]
+            }
+        },
+        {
+            "name": "[parameters('PAVmName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2015-06-15",
+            "location": "[parameters('PAlocation')]",
+            "plan": {
+               "name": "[variables('imageSku')]",
+               "product": "[variables('imageOffer')]",
+               "publisher": "[variables('imagePublisher')]"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/publicIPAddresses/', parameters('PAPublicIPAddressName'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', variables('NameForNSGOfPA'))]",
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+                "[concat('Microsoft.Network/networkInterfaces/', concat(variables('nicName'), '0'))]",
+                "[concat('Microsoft.Network/networkInterfaces/', concat(variables('nicName'), '1'))]",
+                "[concat('Microsoft.Network/networkInterfaces/', concat(variables('nicName'), '2'))]",
+                "[concat('Microsoft.Network/networkInterfaces/', concat(variables('nicName'), '3'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('PAVmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('PAVmName')]",
+                    "adminUsername": "[parameters('PAAdminUsername')]",
+                    "adminPassword": "[parameters('PAAdminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('imagePublisher')]",
+                        "offer": "[variables('imageOffer')]",
+                        "sku": "[variables('imageSku')]",
+                        "version": "[variables('imageVersion')]"
+                    },
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat(reference(concat('Microsoft.Storage/storageAccounts/', parameters('PAStorageAccountName')), '2015-06-15').primaryEndpoints.blob, 'vhds/', parameters('PAVmName'), '-', uniqueString(subscription().subscriptionId), '.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [{
+                        "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'),'0'))]",
+                        "properties": {
+                            "primary": true
+                        }
+                    }, {
+                        "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'),'1'))]",
+                        "properties": {
+                            "primary": false
+                        }
+                    }, {
+                        "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'),'2'))]",
+                        "properties": {
+                            "primary": false
+                        }
+                    }, {
+                        "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName'),'3'))]",
+                        "properties": {
+                            "primary": false
+                        }
+                    }]
+                }
+            }
+        }
+    ]
+}

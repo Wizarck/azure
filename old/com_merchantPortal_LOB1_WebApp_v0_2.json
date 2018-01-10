@@ -1,0 +1,122 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {        
+        "complianceProfile": {
+            "type": "string",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            },
+            "defaultValue": "no-pci",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ]
+        },
+        "environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            },
+            "defaultValue": "development",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ]
+        },
+        "AppName": {
+            "type": "string",
+            "defaultValue": "myappname123",
+            "metadata": {
+                "description": "Name for the Application"
+            } 
+        },
+        "hostingEnvironment": {
+            "type": "string",
+            "defaultValue": "systemAdmin",
+            "metadata": {
+                "description": "Name of the Application Service Environment (ASE)"
+            } 
+        },
+        "serverFarmID": {
+            "type": "string",
+            "defaultValue": "/subscriptions/7181402d-a481-459e-8f31-8a8e5cbe5702/resourceGroups/RG-ASE/providers/Microsoft.Web/serverfarms/ASEsimulator",
+            "metadata": {
+                "description": "ID of ServerFarm from Application Service Environment (ASE)"
+            } 
+        },
+        "SQLServerURL": {
+            "type": "string",
+            "defaultValue": "servidorbbddapptest.database.windows.net",
+            "metadata": {
+                "description": "URL of SQL Server already provisioned"
+            } 
+        },  
+        "SQLAdminLoginPassword": {
+            "type": "securestring",
+            "defaultValue": "PassWord01!",
+            "metadata": {
+                "description": "SQL Data Base "
+            } 
+        },
+        "SQLServerName": {
+            "type": "string",
+            "defaultValue": "sqlserversysadmin",
+            "metadata": {
+                "description": "Name for the server of the SQL DB"
+            }            
+        },
+        "SQLDataBaseName": {
+            "type": "string",
+            "defaultValue": "sqldbnamesysadmin2",
+            "metadata": {
+                "description": "Name for the SQL Database"
+            }            
+        }
+    },
+    "variables": {
+    },
+    "resources": [        
+        {
+            "type": "Microsoft.Sql/servers/databases",
+            "apiVersion": "2014-04-01-preview",
+            "location": "[resourceGroup().location]",
+            "name": "[concat(parameters('SQLServerName'), '/', parameters('SQLDataBaseName'))]",
+            "properties": {
+                "collation": "SQL_Latin1_General_CP1_CI_AS",
+                "edition": "Basic",
+                "maxSizeBytes": "1073741824",
+                "sampleName": null
+            }
+        },
+        {
+            "name": "[parameters('AppName')]",
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2016-03-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Sql/servers/',parameters('SQLServerName'),'/databases/',parameters('SQLDataBaseName'))]"                
+            ],
+            "properties": {
+                "name": "[parameters('AppName')]",
+                "serverFarmId": "[parameters('serverFarmID')]",
+                "hostingEnvironment": "[parameters('hostingEnvironment')]",
+                "siteConfig": {
+                    "connectionStrings": [
+                        {
+                            "name": "defaultConnection",
+                            "ConnectionString": "[concat('Data Source=tcp:' , parameters('SQLServerURL') , ',1433;Initial Catalog=',parameters('SQLDataBaseName'),';User Id=null@',parameters('SQLServerURL'),';Password=',parameters('SQLAdminLoginPassword'),';')]",                        
+                            "type": "SQLAzure"
+                        }
+                    ]
+                }                
+            }
+        }
+    ]
+}

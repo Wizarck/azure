@@ -1,0 +1,984 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            },
+            "defaultValue": "no-pci",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ]
+        },
+        "environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            },
+            "defaultValue": "development",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ]
+        },
+        "DNS1ServerAddress": {
+            "type": "string",
+            "defaultValue": "168.63.129.16",
+            "metadata": {
+                "description": "Domain Name Server 1"
+            }
+        },
+        "DNS2ServerAddress": {
+            "type": "string",
+            "defaultValue": "168.63.129.17",
+            "metadata": {
+                "description": "Domain Name Server 2"
+            }
+        },
+        "VNetName": {
+            "type": "string",
+            "defaultValue": "commp-vnet1",
+            "metadata": {
+                "description": "Name for the Virtual Network (vNet)"
+            }
+        },
+        "VNetAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.25.32/27",
+            "metadata": {
+                "description": "CIDR block for the vNet"
+            }
+        },
+        "NameForSubnetOfAppServ": {
+            "type": "string",
+            "defaultValue": "commptew1",
+            "metadata": {
+                "description": "Name for App Services LOB-1 Subnet"
+            }
+        },
+        "subnetAppServAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.25.32/28",
+            "metadata": {
+                "description": "CIDR block for App Services LOB-1 Subnet"
+            }
+        },
+        "NameForNSGOfAppServ": {
+            "type": "string",
+            "defaultValue": "comit-LOB1-nsg",
+            "metadata": {
+                "description": "Network Security Group Name for App Services LOB-1 Subnet"
+            }
+        },
+        "NameForSubnetOfHostAgent": {
+            "type": "string",
+            "defaultValue": "commptew2",
+            "metadata": {
+                "description": "Name for Host Agent LOB-1 Subnet"
+            }
+        },
+        "subnetHostAgentAddressPrefix": {
+            "type": "string",
+            "defaultValue": "10.25.25.56/29",
+            "metadata": {
+                "description": "CIDR block for Host Agent LOB-1 Subnet"
+            }
+        },
+        "NameForNSGOfHostAgent": {
+            "type": "string",
+            "defaultValue": "comit-LOB2-nsg",
+            "metadata": {
+                "description": "Network Security Group Name for App Services LOB-1 Subnet"
+            }
+        },
+        "ResourceIDOfSecurityHub": {
+            "type": "string",
+            "defaultValue": "ID",
+            "metadata": {
+                "description": "Resource ID string of Security Hub"
+            }
+        },
+        "aseName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the App Service Environment"
+            }
+        }, 
+        "aseLocation": { 
+            "type": "string", 
+            "defaultValue": "West Europe",
+            "allowedValues": [ 
+                "North Europe", 
+                "West Europe"
+            ], 
+            "metadata": {
+                "description": "Location for ASE service"
+            }
+        },        
+        "asePfxBlobString": {
+            "type": "string",
+            "metadata": {
+                "description": "A pfx file encoded as a base-64 string.  The pfx contains the SSL certificate that will be configured as the default SSL certificate for the ASE."
+            }
+        },
+        "asePassword": {
+            "type": "string",
+            "metadata": {
+                "description": "The password for the pfx filed contained in pfxBlobString."
+            }
+        },
+        "aseCertificateThumbprint": {
+            "type": "string",
+            "metadata": {
+                "description": "The hexadecimal certificate thumbprint of the certificate contained in pfxBlobString.  All spaces need to be removed from the hex string."
+            }
+        },
+        "aseCertificateName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the certificate.  This can be any name you want to use to identify the certificate."
+            }
+        },
+        "dnsSuffix": {
+            "type": "string",
+            "defaultValue": "commpaetew.internal.icomerciagp-dev-com",
+            "metadata": {
+                "description": "Used *only* when deploying an ILB enabled ASE.  Set this to the root domain associated with the ASE.  For example: contoso.com"
+            }
+        },
+        "frontEndSize": {
+            "type": "string",
+            "allowedValues": [
+                "Medium",
+                "Large",
+                "ExtraLarge"
+            ],
+            "defaultValue": "Medium",
+            "metadata": {
+                "description": "Instance size for the front-end pool.  Maps to P2,P3,P4."
+            }
+        },
+        "frontEndCount": {
+            "type": "int",
+            "defaultValue": 2,
+            "metadata": {
+                "description": "Number of instances in the front-end pool.  Minimum of two."
+            }
+        },
+        "workerPoolOneInstanceSize": {
+            "type": "string",
+            "allowedValues": [
+                "Small",
+                "Medium",
+                "Large",
+                "ExtraLarge"
+            ],
+            "defaultValue": "Small",
+            "metadata": {
+                "description": "Instance size for worker pool one.  Maps to P1,P2,P3,P4."
+            }
+        },
+        "workerPoolOneInstanceCount": {
+            "type": "int",
+            "defaultValue": 2,
+            "metadata": {
+                "description": "Number of instances in worker pool one.  Minimum of two."
+            }
+        },
+        "workerPoolTwoInstanceSize": {
+            "type": "string",
+            "allowedValues": [
+                "Small",
+                "Medium",
+                "Large",
+                "ExtraLarge"
+            ],
+            "defaultValue": "Small",
+            "metadata": {
+                "description": "Instance size for worker pool two.  Maps to P1,P2,P3,P4."
+            }
+        },
+        "workerPoolTwoInstanceCount": {
+            "type": "int",
+            "defaultValue": 0,
+            "metadata": {
+                "description": "Number of instances in worker pool two.  Can be zero if not using worker pool two."
+            }
+        },
+        "workerPoolThreeInstanceSize": {
+            "type": "string",
+            "allowedValues": [
+                "Small",
+                "Medium",
+                "Large",
+                "ExtraLarge"
+            ],
+            "defaultValue": "Small",
+            "metadata": {
+                "description": "Instance size for worker pool three.  Maps to P1,P2,P3,P4."
+            }
+        },
+        "workerPoolThreeInstanceCount": {
+            "type": "int",
+            "defaultValue": 0,
+            "metadata": {
+                "description": "Number of instances in worker pool three.  Can be zero if not using worker pool three."
+            }
+        },
+        "VstsVirtualMachineName": {
+            "type": "string",
+            "defaultValue": "VSTS",
+            "metadata": {
+                "description": "Name of the VM to create"
+            }
+        },
+        "VSTSVirtualMachineSize": {
+            "type": "string",
+            "defaultValue": "Standard_A3",
+            "metadata": {
+                "description": "Size of the VM"
+            }
+        },
+        "VSTSVmAdminUsername": {
+            "type": "string",
+            "defaultValue": "systemAdmin",
+            "metadata": {
+                "description": "Name of admin user"
+            }
+        },
+        "VSTSVmAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "PassWord012!",
+            "metadata": {
+                "description": "Password for admin user of VM"
+            }
+        },
+        "VSTSVmDiskType": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS"
+            ],
+            "metadata": {
+                "description": "Type of the Managed Disk"
+            }            
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "storageAccountWizarck",
+            "metadata": {
+                "description": "Name for Storage Account"
+            }            
+        },
+        "storageAccountSKU": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Premium_LRS"
+            ],
+            "metadata": {
+                "description": "SKU for Storage Account"
+            }            
+        },
+        "sqlServerName": {
+            "type": "string",
+            "defaultValue": "sqlserversysadmin",
+            "metadata": {
+                "description": "Name for the server of the SQL DB"
+            }            
+        },
+        "sqlDatabaseName": {
+            "type": "string",
+            "defaultValue": "sqldbnamesysadmin",
+            "metadata": {
+                "description": "Name for the SQL Database"
+            }            
+        },
+        "sqlAdminLogin": {
+            "type": "string",
+            "defaultValue": "systemAdmin",
+            "metadata": {
+                "description": "Login for the SQL Admin User"
+            }            
+        },
+        "sqlAdminPassword": {
+            "type": "securestring",
+            "defaultValue": "PassWord01!",
+            "metadata": {
+                "description": "Password for the SQL Admin User"
+            }            
+        }
+    },
+    "variables": {
+        "peeringName": "[concat(parameters('VNetName'), '/peering-to-remote-vnet')]",
+        "subnetRef": "[resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks/subnets', parameters('VNetName'), parameters('nameForSubnetOfHostAgent'))]",
+        "networkInterfaceName": "[concat(parameters('VstsVirtualMachineName'),'-nic')]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[parameters('NameForNSGOfAppServ')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [  
+                    {
+                        "name": "allow-dns1",
+                        "properties": {
+                            "description": "DNS (UDP/53)",
+                            "protocol": "UDP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "53",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 200,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "allow-dns2",
+                        "properties": {
+                            "description": "DNS (UDP/53)",
+                            "protocol": "UDP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "53",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 210,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "allow-azureFiles",
+                        "properties": {
+                            "description": "Azure Files Services (TCP/445)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 220,
+                            "direction": "Outbound"
+                        }
+                    },              
+                    {
+                        "name": "allow-https-outbound",
+                        "properties": {
+                            "description": "HTTPS Azure Sync and Web (TCP/443)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 300,
+                            "direction": "Outbound"
+                        }
+                    },    
+                    {
+                        "name": "allow-https-outbound-intra",
+                        "properties": {
+                            "description": "HTTPS Azure Sync and Web (TCP/443)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 310,
+                            "direction": "Outbound"
+                        }
+                    },  
+                    {
+                        "name": "allow-http-outbound",
+                        "properties": {
+                            "description": "HTTP Azure Sync and Web (TCP/80)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 320,
+                            "direction": "Outbound"
+                        }
+                    },    
+                    {
+                        "name": "allow-http-outbound-intra",
+                        "properties": {
+                            "description": "HTTP Azure Sync and Web (TCP/80)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 330,
+                            "direction": "Outbound"
+                        }
+                    },  
+                    {
+                        "name": "allow-azureSql",
+                        "properties": {
+                            "description": "Azure SQL Dependency (TCP/1433)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "1433",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 400,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "allow-azureSqlDynamicPort",
+                        "properties": {
+                            "description": "Azure SQL Dependency v12 (TCP/10000-11999)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "10000-11999",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 410,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "allow-azureSqlDynamicPort2",
+                        "properties": {
+                            "description": "Azure SQL Dependency v12 (TCP/14000-14999)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "14000-14999",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 420,
+                            "direction": "Outbound"
+                        }
+                    },                    
+                    {
+                        "name": "deny-all-outbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "allow-azureAseMgmt-1",
+                        "properties": {
+                            "description": "Azure App Services Management via SSL (TCP/454)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "454",
+                            "sourceAddressPrefix": "INTERNET",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 130,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "allow-azureAseMgmt-2",
+                        "properties": {
+                            "description": "Azure App Services Management via SSL (TCP/455)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "455",
+                            "sourceAddressPrefix": "INTERNET",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 140,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "allow-https-inbound",
+                        "properties": {
+                            "description": "HTTPS Azure Sync and Web (TCP/443)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "INTERNET",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 300,
+                            "direction": "Inbound"
+                        }
+                    },    
+                    {
+                        "name": "allow-https-inbound-intra",
+                        "properties": {
+                            "description": "HTTPS Azure Sync and Web (TCP/443)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 310,
+                            "direction": "Inbound"
+                        }
+                    }, 
+                    {
+                        "name": "deny-all-inbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    }                      
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[parameters('NameForNSGOfHostAgent')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "security"
+            },
+            "properties": {
+                "securityRules": [   
+                    {
+                        "name": "allow-dns1",
+                        "properties": {
+                            "description": "DNS (UDP/53)",
+                            "protocol": "UDP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "53",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 200,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "allow-dns2",
+                        "properties": {
+                            "description": "DNS (UDP/53)",
+                            "protocol": "UDP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "53",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "VirtualNetwork",
+                            "access": "Allow",
+                            "priority": 210,
+                            "direction": "Outbound"
+                        }
+                    },         
+                    {
+                        "name": "allow-http-outbound",
+                        "properties": {
+                            "description": "HTTP Azure Sync and Web (TCP/80)",
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "destinationAddressPrefix": "INTERNET",
+                            "access": "Allow",
+                            "priority": 320,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-outbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Outbound"
+                        }
+                    },
+                    {
+                        "name": "deny-all-inbound",
+                        "properties": {
+                            "description": "Deny all traffic",
+                            "protocol": "*",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "*",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Deny",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    }   
+                                
+                ]
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('VNetName')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkSecurityGroups/', parameters('NameForNSGOfAppServ'))]",
+                "[concat('Microsoft.Network/networkSecurityGroups/', parameters('NameForNSGOfHostAgent'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('VNetAddressPrefix')]"
+                    ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": [
+                        "[parameters('DNS1ServerAddress')]",
+                        "[parameters('DNS2ServerAddress')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('NameForSubnetOfAppServ')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetAppServAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('NameForNSGOfAppServ'))]"
+                            }
+                        }
+                    },
+                    {
+                        "name": "[parameters('NameForSubnetOfHostAgent')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetHostAgentAddressPrefix')]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('NameForNSGOfHostAgent'))]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2016-06-01",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[variables('peeringName')]",
+            "location": "[resourceGroup().location]",   
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('VNetName'))]"
+            ],
+            "properties": {
+                "allowVirtualNetworkAccess": "true",
+                "allowForwardedTraffic": "false",
+                "allowGatewayTransit": "false",
+                "useRemoteGateways": "false",
+                "remoteVirtualNetwork": {
+                    "id": "[parameters('ResourceIDOfSecurityHub')]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-08-01",
+            "type": "Microsoft.Web/certificates",
+            "name": "[parameters('aseCertificateName')]",
+            "location": "[parameters('aseLocation')]",
+            "properties": {
+                "pfxBlob": "[parameters('asePfxBlobString')]",
+                "password": "[parameters('asePassword')]",
+                "hostingEnvironmentProfile": {
+                     "id": "[resourceId('Microsoft.Web/hostingEnvironments',parameters('aseName'))]"
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-08-01",
+            "name": "[parameters('aseName')]",
+            "type": "Microsoft.Web/hostingEnvironments",            
+            "location": "[parameters('aseLocation')]", 
+            "kind": "ASEV1",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('VNetName'))]",
+                "[concat('Microsoft.Web/certificates/', parameters('aseCertificateName'))]"
+            ],
+            "properties": {
+                "name": "[parameters('aseName')]",
+                "location": "[parameters('aseLocation')]", 
+                "ipSslAddressCount":0,
+                "internalLoadBalancingMode": 3,
+                "dnsSuffix" : "[parameters('dnsSuffix')]",
+                "virtualNetwork": {
+                    "type": "Microsoft.Network/virtualNetworks",
+                    "Id": "[resourceId('Microsoft.Network/virtualNetworks/', parameters('VNetName'))]",
+                    "Subnet": "[parameters('NameForSubnetOfAppServ')]"
+                },
+                "multiSize": "[parameters('frontEndSize')]",
+                "multiRoleCount": "[parameters('frontEndCount')]",
+                "workerPools": [
+                    {
+                        "workerSizeId": 0,
+                        "workerSize": "[parameters('workerPoolOneInstanceSize')]",
+                        "workerCount": "[parameters('workerPoolOneInstanceCount')]"
+                    },
+                    {
+                        "workerSizeId": 1,
+                        "workerSize": "[parameters('workerPoolTwoInstanceSize')]",
+                        "workerCount": "[parameters('workerPoolTwoInstanceCount')]"
+                    },
+                    {
+                        "workerSizeId": 2,
+                        "workerSize": "[parameters('workerPoolThreeInstanceSize')]",
+                        "workerCount": "[parameters('workerPoolThreeInstanceCount')]"
+                    }
+                ],
+                "clusterSettings": [
+                    {
+                        "name": "DefaultSslCertificateThumbprint",
+                        "value": "[parameters('aseCertificateThumbprint')]"
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Compute/disks",
+            "name": "[concat(parameters('VstsVirtualMachineName'),'-datadisk1')]",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "[parameters('VSTSVmDiskType')]"
+            },
+            "properties": {
+                "creationData": {
+                    "createOption": "Empty"
+                },
+                "diskSizeGB": 1023
+            }
+        },
+        {
+            "name": "[parameters('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",            
+            "apiVersion": "2016-01-01",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "data"
+            },
+            "sku": {
+              "name": "[parameters('storageAccountSKU')]"
+            },
+            "kind": "Storage",
+            "properties": {}
+          },
+        {
+            "name": "[variables('networkInterfaceName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2016-03-30",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/virtualNetworks/', parameters('VNetName'))]"
+            ],
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }                            
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "name": "[parameters('VstsVirtualMachineName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2017-03-30",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "alm"
+            },
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName'))]",
+                "[concat(parameters('VstsVirtualMachineName'),'-datadisk1')]"           
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('VSTSVirtualMachineSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('VstsVirtualMachineName')]",
+                    "adminUsername": "[parameters('VSTSVmAdminUsername')]",
+                    "adminPassword": "[parameters('VSTSVmAdminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": "true"
+                    }
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter",
+                        "version": "latest"
+                    },                
+                    "osDisk": {
+                        "createOption": "FromImage"
+                    },
+                    "dataDisks": [
+                        {
+                            "lun": 0,
+                            "name": "[concat(parameters('VstsVirtualMachineName'),'-datadisk1')]",
+                            "createOption": "attach",
+                            "managedDisk": {
+                                "id": "[resourceId('Microsoft.Compute/disks/', concat(parameters('VstsVirtualMachineName'),'-datadisk1'))]"
+                            }
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+                        }
+                    ]
+                },
+                "licenseType": "Windows_Server"
+            }
+        },
+        {
+            "name": "microsoft.antimalware-windows-20170925144054",
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('VstsVirtualMachineName'))]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "https://gallery.azure.com/artifact/20161101/microsoft.antimalware-windows-arm.1.0.0/Artifacts/MainTemplate.json"
+                },
+                "parameters": {
+                    "vmName": {
+                        "value": "[parameters('VstsVirtualMachineName')]"
+                    },
+                    "location": {
+                        "value": "[resourceGroup().location]"
+                    },
+                    "RealtimeProtectionEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsIsEnabled": {
+                        "value": "true"
+                    },
+                    "ScheduledScanSettingsScanType": {
+                        "value": "Quick"
+                    },
+                    "ScheduledScanSettingsDay": {
+                        "value": "1"
+                    },
+                    "ScheduledScanSettingsTime": {
+                        "value": "120"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-05-01-preview",
+            "type": "Microsoft.Sql/servers",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "data"
+            },
+            "name": "[parameters('sqlServerName')]",
+            "properties": {
+                "administratorLogin": "[parameters('sqlAdminLogin')]",
+                "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+                "version": "12.0"
+            },
+            "resources": [
+                {
+                    "apiVersion": "2014-04-01-preview",
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', parameters('sqlServerName'))]"
+                    ],
+                    "location": "[resourceGroup().location]",
+                    "tags": {
+                        "complianceProfile": "[parameters('complianceProfile')]",
+                        "environment": "[parameters('environment')]",
+                        "tier": "communications"
+                    },
+                    "name": "[parameters('sqlDatabaseName')]",
+                    "properties": {
+                        "collation": "SQL_Latin1_General_CP1_CI_AS",
+                        "edition": "Basic",
+                        "maxSizeBytes": "1073741824",
+                        "sampleName": null
+                    },
+                    "type": "databases"
+                },
+                {
+                    "apiVersion": "2014-04-01-preview",
+                    "type": "firewallrules",
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', parameters('sqlServerName'))]"
+                    ],
+                    "location": "[resourceGroup().location]",
+                    "name": "AllowAllWindowsAzureIps",
+                    "properties": {
+                        "endIpAddress": "0.0.0.0",
+                        "startIpAddress": "0.0.0.0"
+                    }                    
+                }
+            ]            
+        }        
+    ]
+}

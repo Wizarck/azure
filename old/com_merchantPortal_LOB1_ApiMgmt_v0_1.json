@@ -1,0 +1,89 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            },
+            "defaultValue": "no-pci",
+            "allowedValues": [
+				"no-pci",
+                "pci"
+            ]
+        },
+        "environment": {
+            "type": "string",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            },
+            "defaultValue": "development",
+            "allowedValues": [
+				"production",
+                "preproduction",
+                "development"
+            ]
+        },
+        "apiMgmt_name": {
+            "type": "string",
+            "metadata": {
+                "description": "API Manager name"
+            },
+            "defaultValue": "apiName"
+        },
+        "apiMgmt_AdminEmail": {
+            "type": "string",
+            "metadata": {
+                "description": "Email for emails and alerts"
+            },
+            "defaultValue": "testemail@hotmail.com"
+        },
+        "apiMgmt_OrgName": {
+            "type": "string",
+            "metadata": {
+                "description": "Organization Name for emails and alerts"
+            },
+            "defaultValue": "TestOrg"
+        }        
+    },
+    "variables": {     
+        "apiMgmt_SKU": "Developer"
+    },
+    "resources": [
+        {
+            "apiVersion": "2016-10-10",
+            "name": "[parameters('apiMgmt_name')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "communications"
+            },
+            "type": "Microsoft.ApiManagement/service",
+            "sku": {
+                "name": "[variables('apiMgmt_SKU')]",
+                "capacity": 1
+            },
+            "properties": {
+                "publisherEmail": "[parameters('apiMgmt_AdminEmail')]",
+                "publisherName": "[parameters('apiMgmt_OrgName')]",
+                "VirtualNetworkConfiguration": {
+                    "type": "object",
+                    "properties": {
+                      "subnetResourceId": {
+                        "type": "string",
+                        "description": "Subnet Resource Id."
+                      },
+                      "location": {
+                        "type": "string",
+                        "description": "Virtual network location name."
+                      }
+                    },
+                    "description": "Configuration of a virtual network."
+                  },
+                "virtualNetworkType": "None"
+            }
+        }        
+    ]
+}

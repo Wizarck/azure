@@ -1,0 +1,84 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "allowedValues": [
+                "no-pci",
+                "pci"
+            ],
+            "defaultValue": "no-pci",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            }
+        },
+        "environment": {
+            "type": "string",
+            "allowedValues": [
+                "production",
+                "preproduction",
+                "development"
+            ],
+            "defaultValue": "development",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            }
+        },
+        "sqlServerName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name for the server of the SQL DB"
+            },
+            "defaultValue": "sqlservertest"
+        },
+        "sqlAdminLogin": {
+            "type": "string",
+            "metadata": {
+                "description": "Login for the SQL Admin User"
+            },
+            "defaultValue": "Administrador"
+        },
+        "sqlAdminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Password for the SQL Admin User"
+            },
+            "defaultValue": "PassWord01!"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {            
+            "name": "[parameters('sqlServerName')]",
+            "type": "Microsoft.Sql/servers",
+            "apiVersion": "2015-05-01-preview",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "complianceProfile": "[parameters('complianceProfile')]",
+                "environment": "[parameters('environment')]",
+                "tier": "data"
+            },            
+            "properties": {
+                "administratorLogin": "[parameters('sqlAdminLogin')]",
+                "administratorLoginPassword": "[parameters('sqlAdminPassword')]",
+                "version": "12.0"
+            },
+            "resources": [
+                {
+                    "name": "allow-PaloAlto",
+                    "type": "firewallrules",
+                    "apiVersion": "2014-04-01-preview",
+                    "location": "[resourceGroup().location]",                  
+                    "dependsOn": [
+                        "[concat('Microsoft.Sql/servers/', parameters('sqlServerName'))]"
+                    ],                
+                    "properties": {
+                        "startIpAddress": "40.115.19.240",
+                        "endIpAddress": "40.115.19.240"
+                    }
+                }
+            ]
+        }
+    ]
+}
