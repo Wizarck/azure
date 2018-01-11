@@ -1,0 +1,80 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "complianceProfile": {
+            "type": "string",
+            "allowedValues": [
+                "no-pci",
+                "pci"
+            ],
+            "defaultValue": "no-pci",
+            "metadata": {
+                "description": "PCI or no-PCI"
+            }
+        },
+        "environment": {
+            "type": "string",
+            "allowedValues": [
+                "production",
+                "preproduction",
+                "development"
+            ],
+            "defaultValue": "development",
+            "metadata": {
+                "description": "Define environment to deploy in"
+            }
+        },
+        "name": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of Storage Account"
+            }
+        },
+        "accountType": {
+            "type": "string",
+            "defaultValue": "Standard_LRS"
+        },
+        "httpsTrafficOnlyEnabled": {
+            "type": "bool",
+            "defaultValue": true
+        },
+        "baseUrl" : {
+            "type" : "string",
+            "metadata": {
+                "artifactsBaseUrl": ""
+            },
+            "defaultValue": "https://comerciagp.visualstudio.com/Comercia2.0/_git/CGP.IaC.Templates"
+            https://U0191965:u27bxi24bheqfq6ihjd472ofnwrlffeqigobbzzasvmfxqxoyzsq@comerciagp.visualstudio.com/0c24745b-2635-4175-bd4e-75185d79485e/_api/_versioncontrol/itemContent?repositoryId=0917770a-f5c1-414f-8033-ae2073ad3f5f&path=%2Fold%2Fdeployed.json
+
+        }
+    },
+    "variables": {
+        "StorageAccountName": "[concat(parameters('name'),substring(uniqueString(resourceGroup().id), 0, 5))]",
+        "storageAccountSetupURL" : "[concat(parameters('baseUrl'),'/storageAccount-',parameters('storageAccountNewOrExisting'),'.json')]",
+	    "ssTemplateUrl": "[concat(parameters('baseUrl'), '/storage.account/', 'storage.account-', parameters('storageAccountNewOrExisting'),'.json')]"
+    },
+    "resources": [
+        {
+            "name": "Storage",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2015-01-01",
+            "dependsOn": [
+            ],
+            "properties": {
+              "mode": "Incremental",
+              "templateLink": {
+                "uri": "[variables('ssTemplateUrl')]",
+                "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "complianceProfile": "[parameters('complianceProfile')]",
+                    "environment": "[parameters('environment')]",
+                    "name": "[parameters('environment')]",
+                    "accountType": "[parameters('environment')]",
+                    "httpsTrafficOnlyEnabled": "[parameters('environment')]"
+                }
+            }
+        }
+    ]
+}
