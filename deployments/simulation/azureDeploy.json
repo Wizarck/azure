@@ -79,7 +79,7 @@
                 },
                 "parameters": {
                     "complianceProfile": {
-                        "value": "[parameters('complianceProfile')]",
+                        "value": "[parameters('complianceProfile')]"
                     },
                     "environment":  {
                         "value": "[parameters('environment')]"
