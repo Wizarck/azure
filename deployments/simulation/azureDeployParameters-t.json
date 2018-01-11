@@ -1,90 +1,27 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
         "complianceProfile": {
-            "type": "string",
-            "allowedValues": [
-                "no-pci",
-                "pci"
-            ],
-            "defaultValue": "no-pci",
-            "metadata": {
-                "description": "PCI or no-PCI"
-            }
+            "value": "no-pci"
         },
         "environment": {
-            "type": "string",
-            "allowedValues": [
-                "production",
-                "preproduction",
-                "development"
-            ],
-            "defaultValue": "development",
-            "metadata": {
-                "description": "Define environment to deploy in"
-            }
+            "value": "development"
         },
         "name": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of Storage Account"
-            }
+            "value": "development"
         },
         "accountType": {
-            "type": "string",
-            "defaultValue": "Standard_LRS"
+            "value": "Standard_LRS"
         },
         "httpsTrafficOnlyEnabled": {
-            "type": "bool",
-            "defaultValue": true
+            "value": true
         },
         "baseUrl" : {
-            "type" : "string",
-            "metadata": {
-                "artifactsBaseUrl": ""
-            },
-            "defaultValue": "https://U0191965:u27bxi24bheqfq6ihjd472ofnwrlffeqigobbzzasvmfxqxoyzsq@comerciagp.visualstudio.com/0c24745b-2635-4175-bd4e-75185d79485e/_api/_versioncontrol/itemContent?repositoryId=0917770a-f5c1-414f-8033-ae2073ad3f5f&path=%2F"
+            "value": "https://U0191965:u27bxi24bheqfq6ihjd472ofnwrlffeqigobbzzasvmfxqxoyzsq@comerciagp.visualstudio.com/0c24745b-2635-4175-bd4e-75185d79485e/_api/_versioncontrol/itemContent?repositoryId=0917770a-f5c1-414f-8033-ae2073ad3f5f&path=%2F"
         },
         "storageAccountType" : {
-            "type" : "string",
-            "allowedValues": [
-                "default",
-                "HA",
-                "crypto"
-            ],
-            "defaultValue:": "default",
-            "metadata": {
-                "description": "Type of Storage Account"
-            }
+            "value:": "default"
         }
-    },
-    "variables": {
-        "storageAccountResourceURL" : "resources%2Fstorage.account%2F",
-        "storageAccountType" : "[concat('storage.account-',parameters('storageAccountType'))]",
-	    "storageAccountTemplateURL": "[concat(parameters('baseUrl'), '/storage.account/', 'storage.account-', variables('storageAccountResourceURL'), variables('storageAccountType'), '.json')]"
-    },
-    "resources": [
-        {
-            "name": "Storage",
-            "type": "Microsoft.Resources/deployments",
-            "apiVersion": "2015-01-01",
-            "dependsOn": [
-            ],
-            "properties": {
-              "mode": "Incremental",
-              "templateLink": {
-                "uri": "[variables('storageAccountTemplateURL')]",
-                "contentVersion": "1.0.0.0"
-                },
-                "parameters": {
-                    "complianceProfile": "[parameters('complianceProfile')]",
-                    "environment": "[parameters('environment')]",
-                    "name": "[parameters('name')]",
-                    "accountType": "[parameters('accountType')]",
-                    "httpsTrafficOnlyEnabled": "[parameters('httpsTrafficOnlyEnabled')]"
-                }
-            }
-        }
-    ]
-}
+    }
+  }
