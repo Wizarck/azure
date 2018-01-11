@@ -61,8 +61,8 @@
     },
     "variables": {
         "storageAccountResourceURL" : "resources%2Fstorage.account%2F",
-        "storageAccountType" : "[concat('storage.account-',parameters('storageAccountType'))]",
-	    "storageAccountTemplateURL": "[concat(parameters('baseUrl'), '/storage.account/', 'storage.account-', variables('storageAccountResourceURL'), variables('storageAccountType'), '.json')]"
+        "storageAccountTypeURL" : "[concat('storage.account-',parameters('storageAccountType'))]",
+	    "storageAccountTemplateURL": "[concat(parameters('baseUrl'), '/storage.account/', 'storage.account-', variables('storageAccountResourceURL'), variables('storageAccountTypeURL'), '.json')]"
     },
     "resources": [
         {
