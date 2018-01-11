@@ -8,7 +8,6 @@
                 "no-pci",
                 "pci"
             ],
-            "defaultValue": "no-pci",
             "metadata": {
                 "description": "PCI or no-PCI"
             }
@@ -20,7 +19,6 @@
                 "preproduction",
                 "development"
             ],
-            "defaultValue": "development",
             "metadata": {
                 "description": "Define environment to deploy in"
             }
@@ -32,12 +30,10 @@
             }
         },
         "accountType": {
-            "type": "string",
-            "defaultValue": "Standard_LRS"
+            "type": "string"
         },
         "httpsTrafficOnlyEnabled": {
-            "type": "bool",
-            "defaultValue": true
+            "type": "bool"
         }
     },
     "variables": {
