@@ -62,7 +62,7 @@
     "variables": {
         "storageAccountResourceURL" : "resources%2Fstorage.account%2F",
         "storageAccountTypeURL" : "[concat('storage.account-',parameters('storageAccountType'))]",
-	    "storageAccountTemplateURL": "[concat(parameters('baseUrl'), '/storage.account/', 'storage.account-', variables('storageAccountResourceURL'), variables('storageAccountTypeURL'), '.json')]"
+	    "storageAccountTemplateURL": "[concat(parameters('baseUrl'), variables('storageAccountResourceURL'), variables('storageAccountTypeURL'), '.json')]"
     },
     "resources": [
         {
@@ -78,11 +78,21 @@
                 "contentVersion": "1.0.0.0"
                 },
                 "parameters": {
-                    "complianceProfile": "[parameters('complianceProfile')]",
-                    "environment": "[parameters('environment')]",
-                    "name": "[parameters('name')]",
-                    "accountType": "[parameters('accountType')]",
-                    "httpsTrafficOnlyEnabled": "[parameters('httpsTrafficOnlyEnabled')]"
+                    "complianceProfile": {
+                        "value": "[parameters('complianceProfile')]",
+                    },
+                    "environment":  {
+                        "value": "[parameters('environment')]"
+                    },
+                    "name":  {
+                        "value": "[parameters('name')]"
+                    },
+                    "accountType":  {
+                        "value": "[parameters('accountType')]"
+                    },
+                    "httpsTrafficOnlyEnabled":  {
+                        "value": "[parameters('httpsTrafficOnlyEnabled')]"
+                    }
                 }
             }
         }

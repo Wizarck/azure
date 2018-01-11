@@ -19,6 +19,9 @@
         },
         "baseUrl" : {
             "value": "https://U0191965:u27bxi24bheqfq6ihjd472ofnwrlffeqigobbzzasvmfxqxoyzsq@comerciagp.visualstudio.com/0c24745b-2635-4175-bd4e-75185d79485e/_api/_versioncontrol/itemContent?repositoryId=0917770a-f5c1-414f-8033-ae2073ad3f5f&path=%2F"
+        },
+        "storageAccountType" : {
+            "value": "default"
         }
     }
   }
